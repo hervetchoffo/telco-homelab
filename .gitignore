@@ -1,0 +1,43 @@
+# Kubernetes credentials — never commit
+kubeconfig
+*.kubeconfig
+.kube/
+
+# Secrets & environment files
+secrets/
+*.secret
+*.env
+.env
+.env.*
+!.env.example
+
+# K3s runtime data
+/k3s-data/
+k3s-token
+
+# Docker build artefacts
+docker/*/build/
+*.tar
+
+# Monitoring persistent data
+monitoring/grafana/data/
+monitoring/prometheus/data/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Build output
+dist/
+build/
