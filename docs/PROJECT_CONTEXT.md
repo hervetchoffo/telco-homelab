@@ -43,13 +43,20 @@ the correct topology is 1 server + 1 agent. HA is out of scope for Edition 1.
 Versioning (SemVer):
   - MAJOR=1  → Edition 1 (Core Infrastructure)
   - MINOR    → one deliverable milestone (v1.2.0 = HLD document)
-  - PATCH    → fix after a MINOR (v1.2.1)
+  - PATCH    → fix or addition after a MINOR (v1.1.1 = credential guide)
   - -rc.N    → release candidate
   - -final   → last stable of the edition (archive tag)
 
 GitHub workflow:
-  Milestone v1.X.0 → Issues → Branch feat/v1.X.0-<desc>
-  → PR (links AI discussion) → merge → git tag → Release → Milestone closed
+  Issue → Branch feat/v1.X.0-<desc> or fix/v1.X.Y-<desc>
+  → PR (links AI discussion URL) → merge → git tag → Release
+  → Milestone closed → PROJECT_CONTEXT updated
+
+Local credential setup:
+  - Two fine-grained PATs, one per repo, stored in libsecret
+  - credential.useHttpPath=true isolates tokens by full repo path
+  - Both remote URLs embed username: https://hervetchoffo@github.com/...
+  - Guide: docs/libsecret-credential-setup.md
 
 Repository: https://github.com/hervetchoffo/telco-homelab
 
@@ -63,7 +70,8 @@ Repository: https://github.com/hervetchoffo/telco-homelab
 
 | Version | Milestone | Status | Notes |
 |---|---|---|---|
-| `v1.1.0` | Initialize GitHub repository | ✅ Done | README, CHANGELOG, 3 ADRs, PROJECT_CONTEXT, init-repo.sh |
+| `v1.1.0` | Initialize GitHub repository | ✅ Done | README, CHANGELOG, ADR-001/002/003, PROJECT_CONTEXT, init-repo.sh |
+| `v1.1.1` | Credential setup documentation | ✅ Done | docs/libsecret-credential-setup.md, CHANGELOG updated |
 | `v1.2.0` | HLD document & network inventory | 🔲 | |
 | `v1.3.0` | Prepare Raspberry Pi OS (Trixie) | 🔲 | |
 | `v1.4.0` | K3s server on Pi #1 | 🔲 | |
@@ -90,6 +98,8 @@ Repository: https://github.com/hervetchoffo/telco-homelab
 | 2 | Confirm USB disk filesystem (ext4 recommended) | ⚠️ v1.3.0 |
 | 3 | Gitea registry vs Docker Hub for ARM images | ⚠️ v1.9.0 |
 | 4 | Trixie boot path: `/boot/firmware/cmdline.txt` | ✅ Confirmed |
+| 5 | Per-repo PAT isolation via `credential.useHttpPath=true` | ✅ Implemented — see docs/libsecret-credential-setup.md |
+| 6 | PAT expiry: both tokens expire after 90 days — renewal procedure documented | ✅ Documented |
 
 ---
 
@@ -97,12 +107,23 @@ Repository: https://github.com/hervetchoffo/telco-homelab
 
 ### Milestones (GitHub → Issues → Milestones)
 
-Create one milestone per MINOR version:
-`v1.2.0 — HLD document` · `v1.3.0 — Prepare OS` · `v1.4.0 — K3s server`
-`v1.5.0 — K3s agent` · `v1.6.0 — Smoke test` · `v1.7.0 — USB volumes`
-`v1.8.0 — NFS server` · `v1.9.0 — Gitea` · `v1.10.0 — Nginx`
-`v1.11.0 — Tvheadend` · `v1.12.0 — Versioning` · `v1.13.0 — Woodpecker`
-`v1.14.0 — Pipeline` · `v1.15.0 — Monitoring`
+| Milestone | Status |
+|---|---|
+| `v1.1.0 — Initialize GitHub repository` | ✅ Closed |
+| `v1.2.0 — HLD document & network inventory` | 🔲 Create |
+| `v1.3.0 — Prepare Raspberry Pi OS` | 🔲 Create |
+| `v1.4.0 — K3s server on Pi #1` | 🔲 Create |
+| `v1.5.0 — K3s agent on Pi #2` | 🔲 Create |
+| `v1.6.0 — Smoke test` | 🔲 Create |
+| `v1.7.0 — USB volumes` | 🔲 Create |
+| `v1.8.0 — NFS server` | 🔲 Create |
+| `v1.9.0 — Gitea` | 🔲 Create |
+| `v1.10.0 — Nginx` | 🔲 Create |
+| `v1.11.0 — Tvheadend` | 🔲 Create |
+| `v1.12.0 — Versioning` | 🔲 Create |
+| `v1.13.0 — Woodpecker` | 🔲 Create |
+| `v1.14.0 — Pipeline` | 🔲 Create |
+| `v1.15.0 — Monitoring` | 🔲 Create |
 
 ### Projects board columns
 
@@ -114,28 +135,36 @@ Create one milestone per MINOR version:
 
 Format: `[v1.X.0] <Imperative verb> <object>`
 
-| Title | Milestone |
-|---|---|
-| `[v1.1.0] Initialize GitHub repository` | ✅ Done |
-| `[v1.2.0] Write HLD document` | next |
-| `[v1.3.0] Prepare Raspberry Pi OS` | |
-| `[v1.4.0] Install K3s server node` | |
-| `[v1.5.0] Join K3s worker node` | |
-| `[v1.6.0] Validate cluster with smoke test` | |
-| `[v1.7.0] Configure USB persistent volumes` | |
-| `[v1.8.0] Deploy NFS server` | |
-| `[v1.9.0] Deploy Gitea as GitOps source` | |
-| `[v1.10.0] Deploy Nginx with Traefik` | |
-| `[v1.11.0] Deploy Tvheadend with USB tuner` | |
-| `[v1.12.0] Version images and manifests` | |
-| `[v1.13.0] Set up Woodpecker CI runner` | |
-| `[v1.14.0] Build and deploy CI pipeline` | |
-| `[v1.15.0] Add Prometheus and Grafana` | |
+| Title | Milestone | AI session link |
+|---|---|---|
+| `[v1.1.0] Initialize GitHub repository` | ✅ Done | Not shared — contains revoked credential |
+| `[v1.2.0] Write HLD document` | next | To be added after session |
+| `[v1.3.0] Prepare Raspberry Pi OS` | | |
+| `[v1.4.0] Install K3s server node` | | |
+| `[v1.5.0] Join K3s worker node` | | |
+| `[v1.6.0] Validate cluster with smoke test` | | |
+| `[v1.7.0] Configure USB persistent volumes` | | |
+| `[v1.8.0] Deploy NFS server` | | |
+| `[v1.9.0] Deploy Gitea as GitOps source` | | |
+| `[v1.10.0] Deploy Nginx with Traefik` | | |
+| `[v1.11.0] Deploy Tvheadend with USB tuner` | | |
+| `[v1.12.0] Version images and manifests` | | |
+| `[v1.13.0] Set up Woodpecker CI runner` | | |
+| `[v1.14.0] Build and deploy CI pipeline` | | |
+| `[v1.15.0] Add Prometheus and Grafana` | | |
 
 ---
 
 ## Session workflow
 
-**End of session:** mark milestone ✅, note decisions, commit `docs: update PROJECT_CONTEXT after v1.X.0`
+### End of session
+1. Mark completed milestone ✅ in the status table
+2. Note decisions made, blockers hit, files produced
+3. Update open decisions table
+4. Commit: `docs: update PROJECT_CONTEXT after v1.X.Y`
 
-**Start of session:** paste briefing block + updated status rows + `"Today's goal: v1.X.0 — [title]"`
+### Start of next session
+1. Copy the **Briefing block** above
+2. Paste updated status rows into the `CURRENT STATUS` section
+3. Append: `"Today's goal: milestone v1.X.0 — [title]"`
+4. After session: get share link from Claude and add to discussion table above

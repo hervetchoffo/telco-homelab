@@ -12,6 +12,14 @@ conventions described in [README.md](README.md#versioning-semver).
 
 ---
 
+## [1.1.1] — 2025-04-30
+
+### Added
+- `docs/libsecret-credential-setup.md`: guide for storing per-repo GitHub PATs
+  using libsecret and `credential.useHttpPath=true` on Linux Mint
+
+---
+
 ## [1.1.0] — 2025-04-29
 
 ### Added
@@ -35,5 +43,6 @@ conventions described in [README.md](README.md#versioning-semver).
 
 ---
 
-[Unreleased]: https://github.com/hervetchoffo/telco-homelab/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/hervetchoffo/telco-homelab/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/hervetchoffo/telco-homelab/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/hervetchoffo/telco-homelab/releases/tag/v1.1.0
