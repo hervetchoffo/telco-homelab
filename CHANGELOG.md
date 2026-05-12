@@ -12,6 +12,26 @@ conventions described in [README.md](README.md#versioning-semver).
 
 ---
 
+## [1.2.0] — 2026-05-11
+
+### Added
+
+- `docs/hld/architecture.md` — High-Level Design for Edition 1 (18 sections):
+  use cases, K8s primer, network architecture (Flannel VXLAN, Traefik,
+  cert-manager, HostPort vs NodePort), node layout, Mermaid sequence diagrams
+  for all five call flows, test & validation procedures (smoke tests,
+  tcpdump/Wireshark/tshark), storage design (XFS quotas, rsync backup),
+  RAM budget with sourced estimates, security considerations, risks register,
+  general reading references (Linux, Docker, Kubernetes, CI/CD)
+- `docs/adr/ADR-004-woodpecker-vs-others.md` — Woodpecker CI selection rationale
+- `docs/adr/ADR-005-traefik-ingress.md` — Traefik as K3s built-in ingress
+- `docs/adr/ADR-006-local-path-storage.md` — local-path-provisioner + XFS quotas
+- `docs/adr/ADR-007-no-ha-edition1.md` — single server + agent, no HA in Edition 1
+- `.github/ISSUE_TEMPLATE/documentation.md` — documentation issue template with
+  AI session URL field
+
+---
+
 ## [1.1.1] — 2025-04-30
 
 ### Added
