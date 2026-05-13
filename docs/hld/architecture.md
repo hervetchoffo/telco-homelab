@@ -1449,6 +1449,7 @@ from tagged, stable releases — aligned with the SemVer workflow.
 ---
 
 ## 14. Edition 1 roadmap
+>*Status is current as of the document version. See [PROJECT_CONTEXT.md](../PROJECT_CONTEXT.md) for live milestone tracking.*
 
 | Version | Phase | Milestone | Status |
 |---------|-------|-----------|--------|
