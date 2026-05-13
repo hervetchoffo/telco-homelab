@@ -38,18 +38,18 @@ Linux → Docker → Kubernetes → CI/CD.
 ┌──────────────────────────────────────────────────────────────┐
 │                       Local Network (LAN)                    │
 │                                                              │
-│  ┌───────────────────────┐     ┌───────────────────────┐    │
-│  │   Raspberry Pi #1     │     │   Raspberry Pi #2     │    │
-│  │   192.168.1.100       │     │   192.168.1.101       │    │
-│  │                       │     │                       │    │
-│  │   K3s server          │◄───►│   K3s agent           │    │
-│  │   (control plane)     │     │   (worker)            │    │
-│  │                       │     │                       │    │
-│  │   • Nginx             │     │   • NFS server        │    │
-│  │   • Gitea             │     │   • Tvheadend         │    │
-│  │                       │     │   • Sundtek USB tuner │    │
-│  │   [USB disk #1 — 1TB] │     │   [USB disk #2 — 1TB] │    │
-│  └───────────────────────┘     └───────────────────────┘    │
+│  ┌───────────────────────┐     ┌───────────────────────┐     │
+│  │   Raspberry Pi #1     │     │   Raspberry Pi #2     │     │
+│  │   192.168.1.100       │     │   192.168.1.101       │     │
+│  │                       │     │                       │     │
+│  │   K3s server          │◄───►│   K3s agent           │     │
+│  │   (control plane)     │     │   (worker)            │     │
+│  │                       │     │                       │     │
+│  │   • Nginx             │     │   • NFS server        │     │
+│  │   • Gitea             │     │   • Tvheadend         │     │
+│  │                       │     │   • Sundtek USB tuner │     │
+│  │   [USB disk #1 — 1TB] │     │   [USB disk #2 — 1TB] │     │
+│  └───────────────────────┘     └───────────────────────┘     │
 └──────────────────────────────────────────────────────────────┘
 ```
 
