@@ -1,6 +1,6 @@
 # 🏠 Telco Home Lab — K3s on Raspberry Pi 2B
 
-[![Version](https://img.shields.io/badge/version-v1.1.0-blue?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v1.2.0-blue?style=flat-square)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![K3s](https://img.shields.io/badge/k3s-v1.29-orange?style=flat-square)](https://k3s.io)
 [![OS](https://img.shields.io/badge/OS-RPi%20OS%20Trixie-c51a4a?style=flat-square)](docs/adr/ADR-003-bookworm-vs-trixie.md)
@@ -38,18 +38,18 @@ Linux → Docker → Kubernetes → CI/CD.
 ┌──────────────────────────────────────────────────────────────┐
 │                       Local Network (LAN)                    │
 │                                                              │
-│  ┌───────────────────────┐     ┌───────────────────────┐    │
-│  │   Raspberry Pi #1     │     │   Raspberry Pi #2     │    │
-│  │   192.168.1.100       │     │   192.168.1.101       │    │
-│  │                       │     │                       │    │
-│  │   K3s server          │◄───►│   K3s agent           │    │
-│  │   (control plane)     │     │   (worker)            │    │
-│  │                       │     │                       │    │
-│  │   • Nginx             │     │   • NFS server        │    │
-│  │   • Gitea             │     │   • Tvheadend         │    │
-│  │                       │     │   • Sundtek USB tuner │    │
-│  │   [USB disk #1 — 1TB] │     │   [USB disk #2 — 1TB] │    │
-│  └───────────────────────┘     └───────────────────────┘    │
+│  ┌───────────────────────┐     ┌───────────────────────┐     │
+│  │   Raspberry Pi #1     │     │   Raspberry Pi #2     │     │
+│  │   192.168.1.100       │     │   192.168.1.101       │     │
+│  │                       │     │                       │     │
+│  │   K3s server          │◄───►│   K3s agent           │     │
+│  │   (control plane)     │     │   (worker)            │     │
+│  │                       │     │                       │     │
+│  │   • Nginx             │     │   • NFS server        │     │
+│  │   • Gitea             │     │   • Tvheadend         │     │
+│  │                       │     │   • Sundtek USB tuner │     │
+│  │   [USB disk #1 — 1TB] │     │   [USB disk #2 — 1TB] │     │
+│  └───────────────────────┘     └───────────────────────┘     │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -73,11 +73,15 @@ telco-homelab/
 ├── .gitignore
 ├── docs/
 │   ├── PROJECT_CONTEXT.md           # AI session briefing + status tracker
-│   ├── hld/architecture.md          # High Level Design
+│   ├── architecture.md              # High-Level Design — Edition 1 (v1.2.0)
 │   └── adr/
 │       ├── ADR-001-k3s-vs-k0s.md
 │       ├── ADR-002-gitea-vs-gitlab.md
-│       └── ADR-003-bookworm-vs-trixie.md
+│       ├── ADR-003-bookworm-vs-trixie.md
+│       ├── ADR-004-woodpecker-vs-others.md
+│       ├── ADR-005-traefik-ingress.md
+│       ├── ADR-006-local-path-storage.md
+│       └── ADR-007-no-ha-edition1.md
 ├── docker/                          # Dockerfiles per service
 │   ├── nginx/ │ gitea/ │ nfs/ │ tvheadend/
 ├── k8s/
@@ -172,19 +176,20 @@ Milestone v1.X.0
 
 | Version | Phase | Milestone | Status |
 |---|---|---|---|
-| `v1.1.0` | Preparation | Initialize GitHub repository | ✅ Current |
-| `v1.2.0` | Preparation | HLD document & network inventory | 🔲 |
+| `v1.1.0` | Preparation | Initialize GitHub repository | ✅ Done |
+| `v1.1.1` | Preparation | Credential setup documentation | ✅ Done |
+| `v1.2.0` | Preparation | HLD document & network inventory | ✅ Done |
 | `v1.3.0` | Preparation | Prepare Raspberry Pi OS (Trixie) | 🔲 |
 | `v1.4.0` | K3s | K3s server on Pi #1 | 🔲 |
 | `v1.5.0` | K3s | K3s agent on Pi #2 | 🔲 |
 | `v1.6.0` | K3s | Validation deployment (smoke test) | 🔲 |
-| `v1.7.0` | Storage | USB persistent volumes | 🔲 |
+| `v1.7.0` | Storage | USB (XFS) persistent volumes + rsync backup | 🔲 |
 | `v1.8.0` | Storage | NFS server in K8s | 🔲 |
-| `v1.9.0` | Storage | Gitea deployed (GitOps pivot) | 🔲 |
+| `v1.9.0` | Services | Gitea deployed (GitOps pivot) | 🔲 |
 | `v1.10.0` | Services | Nginx via Traefik Ingress | 🔲 |
 | `v1.11.0` | Services | Tvheadend + Sundtek USB tuner | 🔲 |
 | `v1.12.0` | Services | Image & manifest versioning | 🔲 |
-| `v1.13.0` | CI/CD | Woodpecker CI runner | 🔲 |
+| `v1.13.0` | CI/CD | Woodpecker CI runner + trigger strategy | 🔲 |
 | `v1.14.0` | CI/CD | Build → deploy pipeline | 🔲 |
 | `v1.15.0` | CI/CD | Prometheus + Grafana monitoring | 🔲 |
 | `v1.15.0-final` | — | Edition 1 archive release | 🔲 |
@@ -195,9 +200,13 @@ Milestone v1.X.0
 
 | ADR | Decision | Status |
 |---|---|---|
-| [ADR-001](docs/adr/ADR-001-k3s-vs-k0s.md) | K3s over K0s | Accepted |
-| [ADR-002](docs/adr/ADR-002-gitea-vs-gitlab.md) | Gitea over GitLab | Accepted |
-| [ADR-003](docs/adr/ADR-003-bookworm-vs-trixie.md) | Raspberry Pi OS Trixie | Accepted |
+| [ADR-001](docs/adr/ADR-001-k3s-vs-k0s.md) | K3s over K0s | ✅ Accepted |
+| [ADR-002](docs/adr/ADR-002-gitea-vs-gitlab.md) | Gitea over GitLab | ✅ Accepted |
+| [ADR-003](docs/adr/ADR-003-bookworm-vs-trixie.md) | Raspberry Pi OS Trixie | ✅ Accepted |
+| [ADR-004](docs/adr/ADR-004-woodpecker-vs-others.md) | Woodpecker CI over Jenkins / Drone / GitHub Actions | ✅ Accepted |
+| [ADR-005](docs/adr/ADR-005-traefik-ingress.md) | Traefik as K3s built-in ingress controller | ✅ Accepted |
+| [ADR-006](docs/adr/ADR-006-local-path-storage.md) | local-path-provisioner with XFS project quotas | ✅ Accepted |
+| [ADR-007](docs/adr/ADR-007-no-ha-edition1.md) | Single server + agent topology (no HA, Edition 1) | ✅ Accepted |
 
 ---
 
