@@ -120,6 +120,28 @@ configure_cgroups() {
 }
 
 # ── 4. USB disk: detect, format XFS+prjquota, mount, fstab ───────────
+ensure_disk_tools() {
+  # xfsprogs (mkfs.xfs) is NOT part of the Raspberry Pi OS Lite base
+  # image — discovered during v1.3.0 on-hardware testing. parted is
+  # checked defensively too, though it was present on tested nodes.
+  local missing_pkgs=()
+  command -v parted   &>/dev/null || missing_pkgs+=("parted")
+  command -v mkfs.xfs &>/dev/null || missing_pkgs+=("xfsprogs")
+
+  if [[ ${#missing_pkgs[@]} -eq 0 ]]; then
+    log "[OK] Required disk tools already present (parted, xfsprogs)"
+    return
+  fi
+
+  log "Installing missing disk tools: ${missing_pkgs[*]}"
+  sudo apt-get update -qq
+  sudo apt-get install -y "${missing_pkgs[@]}"
+
+  command -v parted   &>/dev/null || die "parted still not found after installing 'parted' package"
+  command -v mkfs.xfs &>/dev/null || die "mkfs.xfs still not found after installing 'xfsprogs' package"
+  log "[OK] Disk tools installed: ${missing_pkgs[*]}"
+}
+
 setup_usb_disk() {
   if $SKIP_DISK; then
     log "[SKIP] Disk setup skipped (--skip-disk)"
@@ -148,6 +170,8 @@ setup_usb_disk() {
     if ! $WIPE_DISK; then
       die "$part is not XFS (found: '${current_fstype:-none}'), or fstab entry missing. This disk may contain existing data. This is a DESTRUCTIVE operation — re-run with --wipe-disk once you have confirmed it is safe to erase $disk."
     fi
+
+    ensure_disk_tools
 
     log "[WIPE] Formatting $disk as a single XFS partition (this destroys all existing data on $disk)"
     sudo wipefs -a "$disk"
@@ -223,6 +247,15 @@ harden_ssh
 
 log "═══════════════════════════════════════════════════"
 log " setup-node.sh complete for $ROLE ($EXPECTED_HOSTNAME)"
+
+# Reboot is required if either (a) this run just edited cmdline.txt, or
+# (b) cmdline.txt already has the flags but the *running* kernel's
+# cgroup memory controller isn't actually active yet — e.g. a prior run
+# was interrupted after editing cmdline.txt but before a reboot happened.
+if ! awk '$1=="memory"{print $4}' /proc/cgroups | grep -q '^1$'; then
+  REBOOT_REQUIRED=true
+fi
+
 if $REBOOT_REQUIRED; then
   log " ⚠  Reboot required for cgroup flags to take effect: sudo reboot"
 fi
