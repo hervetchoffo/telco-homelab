@@ -58,6 +58,23 @@ log()  { echo "[$(date '+%H:%M:%S')] $*"; }
 warn() { echo "[$(date '+%H:%M:%S')] [WARN] $*" >&2; }
 die()  { echo "[$(date '+%H:%M:%S')] [ERROR] $*" >&2; exit 1; }
 
+# Detects whether the memory cgroup controller is actually active in the
+# RUNNING kernel, correctly for either cgroup mode:
+#   - cgroup v2 (unified hierarchy, /sys/fs/cgroup mounted as cgroup2fs —
+#     the default on recent kernels/systemd): /proc/cgroups is a legacy
+#     v1 interface and does NOT reliably list v2-only controllers, so we
+#     check /sys/fs/cgroup/cgroup.controllers instead.
+#   - cgroup v1 (legacy hierarchy): check /proc/cgroups as before.
+# Discovered during v1.3.0 on-hardware validation — /proc/cgroups showed
+# no memory line at all on a 6.18 kernel using cgroup v2 by default.
+memory_cgroup_active() {
+  if [[ "$(stat -fc %T /sys/fs/cgroup 2>/dev/null)" == "cgroup2fs" ]]; then
+    grep -qw memory /sys/fs/cgroup/cgroup.controllers 2>/dev/null
+  else
+    awk '$1=="memory"{print $4}' /proc/cgroups 2>/dev/null | grep -q '^1$'
+  fi
+}
+
 # ── Role detection ───────────────────────────────────────────────────
 detect_role() {
   if [[ -n "$FORCE_ROLE" ]]; then
@@ -250,9 +267,9 @@ log " setup-node.sh complete for $ROLE ($EXPECTED_HOSTNAME)"
 
 # Reboot is required if either (a) this run just edited cmdline.txt, or
 # (b) cmdline.txt already has the flags but the *running* kernel's
-# cgroup memory controller isn't actually active yet — e.g. a prior run
+# memory cgroup controller isn't actually active yet — e.g. a prior run
 # was interrupted after editing cmdline.txt but before a reboot happened.
-if ! awk '$1=="memory"{print $4}' /proc/cgroups | grep -q '^1$'; then
+if ! memory_cgroup_active; then
   REBOOT_REQUIRED=true
 fi
 

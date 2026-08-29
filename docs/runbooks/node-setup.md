@@ -185,10 +185,22 @@ Repeat for `pi-agent`.
 Run on **both** nodes:
 
 ```bash
-# 1. cgroups active
+# 1. Memory cgroup controller active
+# NOTE: on a modern kernel using cgroup v2 (unified hierarchy — the
+# default on recent kernels/systemd, confirmed on this project's Trixie
+# image with kernel 6.18), /proc/cgroups is a LEGACY v1 interface and
+# does not reliably list v2-only controllers. Check the mode first:
+stat -fc %T /sys/fs/cgroup
+# cgroup2fs → v2 (expected here) → check cgroup.controllers instead:
+cat /sys/fs/cgroup/cgroup.controllers
+# Expect: "memory" appears in the space-separated list
+#
+# tmpfs → legacy v1 still active → use the traditional check instead:
 cat /proc/cgroups | grep memory
 # Expect: memory  <hierarchy>  <num_cgroups>  1   (last column = enabled)
+```
 
+```bash
 # 2. XFS mount with prjquota
 mount | grep prjquota
 # Expect: /dev/sda1 on /mnt/k3s-storage type xfs (...,prjquota)
