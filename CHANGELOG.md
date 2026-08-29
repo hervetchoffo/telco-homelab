@@ -10,6 +10,69 @@ conventions described in [README.md](README.md#versioning-semver).
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/inventory-node.sh` — read-only hardware inventory: OS/kernel,
+  Pi model, RAM, micro SD card, USB block devices, network interfaces,
+  Sundtek tuner (USB-level detection only — driver deferred to v1.11.0),
+  and pre-K3s cgroup status
+- `scripts/setup-node.sh` — idempotent node preparation: hostname and
+  DHCP-reservation IP verification, cgroup flags on
+  `/boot/firmware/cmdline.txt` (Trixie path), USB disk detection with
+  destructive-operation guard, XFS format with `prjquota`, `/etc/fstab`
+  entry, SSH password-authentication hardening
+- `scripts/setup-zram.sh` — idempotent 512 MB (target) zram swap
+  configuration via `zram-tools`, with pre-flight teardown of any
+  conflicting default zram provider
+- `scripts/install-k3s.sh` — stub documenting the K3s server/agent
+  install commands and node-token exchange procedure; full automation
+  deferred to v1.4.0 (server) and v1.5.0 (agent)
+- `docs/runbooks/node-setup.md` — end-to-end operator guide: SSH key
+  generation, router DHCP reservation, RPi Imager settings, script
+  execution order, validation checklist aligned with HLD §11,
+  troubleshooting table
+- `docs/hardware/inventory-pi-server.txt`, `docs/hardware/inventory-pi-agent.txt`
+  — committed hardware baselines from `inventory-node.sh`
+- `docs/adr/ADR-008-sundtek-device-passthrough.md` — research findings
+  on Sundtek tuner device passthrough (Docker host device-node
+  requirement, translated to K3s `hostPath`/`privileged` pattern).
+  Status: Proposed — implementation deferred to v1.11.0
+
+### Fixed
+
+- `inventory-node.sh`: MAC address extraction was splitting on `': '`,
+  unsafe since MAC addresses themselves contain colons — was printing
+  the interface name twice instead of the MAC. Switched to whitespace
+  field-splitting, scanning for the `link/ether` token.
+- `setup-node.sh`: `xfsprogs` is not part of the Raspberry Pi OS Lite
+  base image — `mkfs.xfs` failed on first on-hardware run. Added
+  `ensure_disk_tools()` to install `xfsprogs`/`parted` lazily, only on
+  the disk-format path.
+- `setup-node.sh`: reboot-required detection initially only checked
+  `/proc/cgroups`, a legacy cgroup v1 interface that does not reliably
+  list controllers on a cgroup v2 (unified hierarchy) system — the
+  default on this project's kernel (6.18). Added `memory_cgroup_active()`,
+  which checks `/sys/fs/cgroup/cgroup.controllers` on v2 systems and
+  falls back to `/proc/cgroups` on v1 systems. Runbook validation
+  checklist updated to match.
+- `setup-zram.sh`: hardware inventory revealed an already-active
+  ~920 MB zram0 swap device present by default on Raspberry Pi OS
+  Trixie, before this script ever ran. Added a pre-flight check that
+  tears down any zram swap not managed by `zram-tools` first.
+
+### Notes
+
+- Confirmed running kernel is `6.18.34+rpt-rpi-v7`, newer than the
+  `6.6 LTS` referenced in ADR-003 at time of writing — expected drift,
+  does not affect the ADR's decision.
+- Confirmed Sundtek MediaTV Pro III MiniPCIe (EU) USB ID: `2659:1212`
+- cgroup v2 (unified hierarchy) confirmed active by default on both
+  nodes; `memory` controller present in `cgroup.controllers`
+- Actual zram size settled at ~460 MB rather than the 512 MB target
+  (installed `zram-tools` version reads the `PERCENT` key over `SIZE`;
+  50% of ~920 MiB usable RAM = 460 MiB) — close enough to target,
+  not adjusted further
+
 ---
 
 ## [1.2.0] — 2026-05-11
