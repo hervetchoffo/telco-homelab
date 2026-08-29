@@ -83,8 +83,19 @@ section "Network Interfaces"
 ip -brief addr show
 echo
 echo "MAC addresses:"
-ip -o link show | awk -F': ' '!/lo/{iface=$2} /ether/{print "  " iface ": " $2}' \
-  || ip link show | awk '/ether/{print "  " $2}'
+# NOTE (fixed after v1.3.0 review): a MAC address contains colons, so
+# splitting the whole line on ': ' is unsafe — it was previously
+# printing the interface name twice instead of the MAC. Whitespace
+# field-splitting (awk's default) avoids this: we scan fields for the
+# literal token "link/ether" and print the field right after it.
+# Loopback shows "link/loopback", not "link/ether", so it's excluded
+# automatically — no separate /lo/ filter needed.
+ip -o link show | awk '{
+  iface=$2; sub(/:$/, "", iface)
+  for (i=1; i<=NF; i++) {
+    if ($i == "link/ether") { print "  " iface ": " $(i+1) }
+  }
+}'
 
 # ── TV Tuner — USB-level detection only (see header note) ──────────────
 section "TV Tuner — USB-level detection"
@@ -125,6 +136,7 @@ CMDLINE_FILE="/boot/firmware/cmdline.txt"
 if [[ -f "$CMDLINE_FILE" ]]; then
   echo "$CMDLINE_FILE:"
   cat "$CMDLINE_FILE"
+  echo   # cmdline.txt has no trailing newline — force one before the next line
   if grep -q "cgroup_memory=1" "$CMDLINE_FILE"; then
     echo "  → cgroup_memory=1 already present"
   else

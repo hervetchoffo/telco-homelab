@@ -3,13 +3,24 @@
 # setup-zram.sh — Configure 512 MB zram swap on Raspberry Pi OS Trixie (v1.3.0)
 #
 # Idempotent — safe to run multiple times. Uses the standard Debian/RPi
-# OS 'zram-tools' package (zramswap.service).
+# OS 'zram-tools' package (zramswap.service), per the v1.3.0 milestone
+# spec.
 #
 # Note: zram-tools versions differ in which key they read for sizing
 # (SIZE in MB on newer versions, PERCENT of RAM on older ones). This
 # script sets both keys so it works either way — the unused key is
 # simply ignored by whichever version is installed. PERCENT=50 of a
 # 1 GB Pi equals the same 512 MB target as SIZE=512.
+#
+# IMPORTANT — pre-existing zram (found during v1.3.0 hardware inventory):
+#   Both nodes were observed with an active ~920 MB zram0 swap device
+#   (matching ~100% of RAM) BEFORE this script ever ran — i.e. Raspberry
+#   Pi OS Trixie appears to enable some form of zram swap by default on
+#   this image. The exact provider was not conclusively identified, so
+#   rather than guess its config file syntax, this script detects any
+#   active zram swap NOT managed by zram-tools and tears it down first,
+#   so we end up with exactly one zram-tools-managed device at our
+#   target size, not two competing swap devices.
 #
 # Usage:
 #   ./setup-zram.sh
@@ -23,7 +34,45 @@ ZRAM_ALGO=lz4
 DEFAULTS_FILE="/etc/default/zramswap"
 
 log()  { echo "[$(date '+%H:%M:%S')] $*"; }
+warn() { echo "[$(date '+%H:%M:%S')] [WARN] $*" >&2; }
 die()  { echo "[$(date '+%H:%M:%S')] [ERROR] $*" >&2; exit 1; }
+
+# ── 0. Detect and disable any zram swap NOT managed by zram-tools ────
+disable_conflicting_zram() {
+  local zram_active
+  zram_active=$(swapon --show=NAME --noheadings 2>/dev/null | grep -c '^/dev/zram' || true)
+
+  if [[ "$zram_active" -eq 0 ]]; then
+    log "[OK] No active zram swap found — clean slate"
+    return
+  fi
+
+  # If zram-tools is installed AND its service is the one active, this
+  # is our own prior run — nothing to tear down, just let the idempotent
+  # config steps below handle re-sizing if needed.
+  if dpkg -s zram-tools &>/dev/null && systemctl is-active --quiet zramswap.service 2>/dev/null; then
+    log "[OK] Active zram swap is already managed by zram-tools — will reconfigure size below"
+    return
+  fi
+
+  warn "Active zram swap found, but not managed by zram-tools (likely a Raspberry Pi OS Trixie default)."
+  warn "Tearing it down so zram-tools can take over as the single source of truth:"
+  swapon --show
+
+  for dev in $(swapon --show=NAME --noheadings | grep '^/dev/zram'); do
+    log "Disabling swap on $dev"
+    sudo swapoff "$dev" || die "Failed to swapoff $dev — investigate manually before proceeding"
+    local zdev="/sys/class/block/$(basename "$dev")/reset"
+    if [[ -w "$zdev" ]]; then
+      echo 1 | sudo tee "$zdev" > /dev/null
+      log "[OK] Reset $dev"
+    fi
+  done
+
+  log "[OK] Pre-existing zram swap cleared. zram-tools will now be installed as the managed provider."
+}
+
+disable_conflicting_zram
 
 # ── 1. Install zram-tools if missing ─────────────────────────────────
 if ! dpkg -s zram-tools &>/dev/null; then
