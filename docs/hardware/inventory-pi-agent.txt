@@ -1,0 +1,108 @@
+# telco-homelab — hardware inventory
+# Host: pi-agent  |  Generated: 2026-08-29T13:03:58Z
+
+## OS & Kernel
+────────────────────────────────────────────────────────────
+Linux pi-agent 6.18.34+rpt-rpi-v7 #1 SMP Raspbian 1:6.18.34-1+rpt1 (2026-06-09) armv7l GNU/Linux
+NAME="Raspbian GNU/Linux"
+VERSION="13 (trixie)"
+VERSION_CODENAME=trixie
+
+## Raspberry Pi Hardware
+────────────────────────────────────────────────────────────
+Hardware	: BCM2835
+Revision	: a01041
+Serial		: 00000000aec0ea1a
+Model		: Raspberry Pi 2 Model B Rev 1.1
+CPU cores : 4
+CPU arch  : armv7l
+CPU temp  : temp=48.7'C
+
+## Memory
+────────────────────────────────────────────────────────────
+               total        used        free      shared  buff/cache   available
+Mem:           920Mi       112Mi       684Mi       3.8Mi       178Mi       807Mi
+Swap:          919Mi          0B       919Mi
+
+## Micro SD Card (/dev/mmcblk0)
+────────────────────────────────────────────────────────────
+NAME         SIZE TYPE FSTYPE MOUNTPOINT
+mmcblk0      7.4G disk        
+|-mmcblk0p1  512M part vfat   /boot/firmware
+`-mmcblk0p2  6.9G part ext4   /
+Card model: SD8GB
+
+## USB Devices (lsusb)
+────────────────────────────────────────────────────────────
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 001 Device 002: ID 0424:9514 Microchip Technology, Inc. (formerly SMSC) SMC9514 Hub
+Bus 001 Device 003: ID 0424:ec00 Microchip Technology, Inc. (formerly SMSC) SMSC9512/9514 Fast Ethernet Adapter
+Bus 001 Device 004: ID 0480:a00d Toshiba America Inc STOR.E BASICS 500GB
+Bus 001 Device 005: ID 2659:1212 Sundtek MediaTV Pro III MiniPCIe (EU)
+
+## Block Devices
+────────────────────────────────────────────────────────────
+NAME          SIZE TYPE FSTYPE MOUNTPOINT     TRAN MODEL
+loop0         920M loop swap                       
+sda         931.5G disk                       usb  TOSHIBA MQ01ABD100
+`-sda1      931.5G part vfat                       
+mmcblk0       7.4G disk                       mmc  
+|-mmcblk0p1   512M part vfat   /boot/firmware mmc  
+`-mmcblk0p2   6.9G part ext4   /              mmc  
+zram0         920M disk swap   [SWAP]              
+
+## Disk Details (fdisk -l per disk)
+────────────────────────────────────────────────────────────
+--- /dev/sda ---
+(no readable partition table)
+
+--- /dev/mmcblk0 ---
+(no readable partition table)
+
+--- /dev/zram0 ---
+(no readable partition table)
+
+
+## Network Interfaces
+────────────────────────────────────────────────────────────
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+eth0             UP             192.168.1.101/24 2a01:cb00:94:4500:ba27:ebff:fec0:ea1a/64 fe80::ba27:ebff:fec0:ea1a/64 
+
+MAC addresses:
+  eth0: b8:27:eb:c0:ea:1a
+
+## TV Tuner — USB-level detection
+────────────────────────────────────────────────────────────
+Note: Sundtek driver is deliberately NOT installed on this host.
+      Only USB enumeration is available here. Driver + DVB-level
+      detail (frontend, supported standards) comes at v1.11.0.
+
+Matched known tuner ID: 2659:1212
+Bus 001 Device 005: ID 2659:1212 Sundtek MediaTV Pro III MiniPCIe (EU)
+
+Full descriptor (informational — driver not loaded, some fields absent):
+
+Bus 001 Device 005: ID 2659:1212 Sundtek MediaTV Pro III MiniPCIe (EU)
+Negotiated speed: High Speed (480Mbps)
+Device Descriptor:
+  bLength                18
+  bDescriptorType         1
+  bcdUSB               2.00
+  bDeviceClass          239 Miscellaneous Device
+  bDeviceSubClass         2 [unknown]
+  bDeviceProtocol         1 Interface Association
+  bMaxPacketSize0        64
+  idVendor           0x2659 Sundtek
+  idProduct          0x1212 MediaTV Pro III MiniPCIe (EU)
+  bcdDevice           40.01
+  iManufacturer           1 Sundtek
+  iProduct                2 MediaTV Pro III MiniPCIe (EU)
+  iSerial                 3 U140630133819
+  bNumConfigurations      1
+  Configuration Descriptor:
+    bLength                 9
+    bDescriptorType         2
+    wTotalLength       0x0158
+    bNumInterfaces          7
+    bConfigurationValue     1
+    iConfiguration          4 

@@ -1,0 +1,119 @@
+# telco-homelab — hardware inventory
+# Host: pi-server  |  Generated: 2026-08-29T13:03:49Z
+
+## OS & Kernel
+────────────────────────────────────────────────────────────
+Linux pi-server 6.18.34+rpt-rpi-v7 #1 SMP Raspbian 1:6.18.34-1+rpt1 (2026-06-09) armv7l GNU/Linux
+NAME="Raspbian GNU/Linux"
+VERSION="13 (trixie)"
+VERSION_CODENAME=trixie
+
+## Raspberry Pi Hardware
+────────────────────────────────────────────────────────────
+Hardware	: BCM2835
+Revision	: a01041
+Serial		: 00000000a0db81fb
+Model		: Raspberry Pi 2 Model B Rev 1.1
+CPU cores : 4
+CPU arch  : armv7l
+CPU temp  : temp=50.8'C
+
+## Memory
+────────────────────────────────────────────────────────────
+               total        used        free      shared  buff/cache   available
+Mem:           920Mi       111Mi       699Mi       3.8Mi       163Mi       808Mi
+Swap:          919Mi          0B       919Mi
+
+## Micro SD Card (/dev/mmcblk0)
+────────────────────────────────────────────────────────────
+NAME         SIZE TYPE FSTYPE MOUNTPOINT
+mmcblk0      7.4G disk        
+|-mmcblk0p1  512M part vfat   /boot/firmware
+`-mmcblk0p2  6.9G part ext4   /
+Card model: SL08G
+
+## USB Devices (lsusb)
+────────────────────────────────────────────────────────────
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 001 Device 002: ID 0424:9514 Microchip Technology, Inc. (formerly SMSC) SMC9514 Hub
+Bus 001 Device 003: ID 0424:ec00 Microchip Technology, Inc. (formerly SMSC) SMSC9512/9514 Fast Ethernet Adapter
+Bus 001 Device 016: ID 1058:1023 Western Digital Technologies, Inc. Elements SE Portable (WDBABV)
+
+## Block Devices
+────────────────────────────────────────────────────────────
+NAME          SIZE TYPE FSTYPE MOUNTPOINT     TRAN MODEL
+loop0         920M loop swap                       
+sda         931.5G disk                       usb  WDC WD10TMVV-11TK7S1
+`-sda1      931.5G part ext4                       
+mmcblk0       7.4G disk                       mmc  
+|-mmcblk0p1   512M part vfat   /boot/firmware mmc  
+`-mmcblk0p2   6.9G part ext4   /              mmc  
+zram0         920M disk swap   [SWAP]              
+
+## Disk Details (fdisk -l per disk)
+────────────────────────────────────────────────────────────
+--- /dev/sda ---
+(no readable partition table)
+
+--- /dev/mmcblk0 ---
+(no readable partition table)
+
+--- /dev/zram0 ---
+(no readable partition table)
+
+
+## Network Interfaces
+────────────────────────────────────────────────────────────
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+eth0             UP             192.168.1.100/24 2a01:cb00:94:4500:ba27:ebff:fedb:81fb/64 fe80::ba27:ebff:fedb:81fb/64 
+
+MAC addresses:
+  eth0: b8:27:eb:db:81:fb
+
+## TV Tuner — USB-level detection
+────────────────────────────────────────────────────────────
+Note: Sundtek driver is deliberately NOT installed on this host.
+      Only USB enumeration is available here. Driver + DVB-level
+      detail (frontend, supported standards) comes at v1.11.0.
+
+No match against known IDs (2659:1212).
+Loose match attempt (sundtek/media/tuner in description):
+  (none found — is the tuner plugged in?)
+
+Recent USB kernel messages (dmesg, filtered):
+[ 2854.549350] usb 1-1.2: New USB device found, idVendor=1058, idProduct=1023, bcdDevice=20.05
+[ 2854.549405] usb 1-1.2: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[ 2894.147810] usb 1-1.2: new high-speed USB device number 12 using dwc_otg
+[ 2895.107815] usb 1-1.2: new high-speed USB device number 13 using dwc_otg
+[ 2895.209123] usb 1-1.2: New USB device found, idVendor=1058, idProduct=1023, bcdDevice=20.05
+[ 2895.209173] usb 1-1.2: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[ 2910.777722] usb 1-1.2: new high-speed USB device number 14 using dwc_otg
+[ 2910.878872] usb 1-1.2: New USB device found, idVendor=1058, idProduct=1023, bcdDevice=20.05
+[ 2910.878914] usb 1-1.2: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[ 2918.967684] usb 1-1.2: new high-speed USB device number 15 using dwc_otg
+[ 2919.068909] usb 1-1.2: New USB device found, idVendor=1058, idProduct=1023, bcdDevice=20.05
+[ 2919.068960] usb 1-1.2: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[ 2945.057554] usb 1-1.2: new high-speed USB device number 16 using dwc_otg
+[ 2945.158684] usb 1-1.2: New USB device found, idVendor=1058, idProduct=1023, bcdDevice=20.05
+[ 2945.158725] usb 1-1.2: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+
+## cgroup Status (pre-K3s check)
+────────────────────────────────────────────────────────────
+/proc/cgroups (memory row is what K3s needs):
+#subsys_name	hierarchy	num_cgroups	enabled
+cpuset	0	45	1
+cpu	0	45	1
+cpuacct	0	45	1
+
+/boot/firmware/cmdline.txt:
+console=serial0,115200 console=tty1 root=PARTUUID=6e2fb260-02 rootfstype=ext4 fsck.repair=yes rootwait ds=nocloud;i=rpi-imager-1787902534132 cfg80211.ieee80211_regdom=FR
+  → cgroup_memory=1 NOT yet present (setup-node.sh will add it)
+
+## Inventory Complete
+────────────────────────────────────────────────────────────
+Hostname : pi-server
+IP(s)    : 192.168.1.100 2a01:cb00:94:4500:ba27:ebff:fedb:81fb 
+Timestamp: 2026-08-29T13:03:53Z
+
+Next step: commit this output to docs/hardware/inventory-$(hostname).txt
+Then run: ./setup-node.sh
