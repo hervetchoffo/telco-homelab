@@ -1,5 +1,5 @@
 # telco-homelab — hardware inventory
-# Host: pi-agent  |  Generated: 2026-08-29T13:03:58Z
+# Host: pi-agent  |  Generated: 2026-08-29T12:42:02Z
 
 ## OS & Kernel
 ────────────────────────────────────────────────────────────
@@ -16,12 +16,12 @@ Serial		: 00000000aec0ea1a
 Model		: Raspberry Pi 2 Model B Rev 1.1
 CPU cores : 4
 CPU arch  : armv7l
-CPU temp  : temp=48.7'C
+CPU temp  : temp=46.5'C
 
 ## Memory
 ────────────────────────────────────────────────────────────
                total        used        free      shared  buff/cache   available
-Mem:           920Mi       112Mi       684Mi       3.8Mi       178Mi       807Mi
+Mem:           920Mi       114Mi       682Mi       3.8Mi       178Mi       805Mi
 Swap:          919Mi          0B       919Mi
 
 ## Micro SD Card (/dev/mmcblk0)
@@ -54,13 +54,34 @@ zram0         920M disk swap   [SWAP]
 ## Disk Details (fdisk -l per disk)
 ────────────────────────────────────────────────────────────
 --- /dev/sda ---
-(no readable partition table)
+Disk /dev/sda: 931.51 GiB, 1000204883968 bytes, 1953525164 sectors
+Disk model: External USB 3.0
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disklabel type: dos
+Disk identifier: 0x7a04ffc9
+
+Device     Boot Start        End    Sectors   Size Id Type
+/dev/sda1        2048 1953523711 1953521664 931.5G  c W95 FAT32 (LBA)
 
 --- /dev/mmcblk0 ---
-(no readable partition table)
+Disk /dev/mmcblk0: 7.42 GiB, 7969177600 bytes, 15564800 sectors
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disklabel type: dos
+Disk identifier: 0x358db968
+
+Device         Boot   Start      End  Sectors  Size Id Type
+/dev/mmcblk0p1        16384  1064959  1048576  512M  c W95 FAT32 (LBA)
+/dev/mmcblk0p2      1064960 15564799 14499840  6.9G 83 Linux
 
 --- /dev/zram0 ---
-(no readable partition table)
+Disk /dev/zram0: 920 MiB, 964689920 bytes, 235520 sectors
+Units: sectors of 1 * 4096 = 4096 bytes
+Sector size (logical/physical): 4096 bytes / 4096 bytes
+I/O size (minimum/optimal): 4096 bytes / 4096 bytes
 
 
 ## Network Interfaces
