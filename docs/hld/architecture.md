@@ -3,7 +3,7 @@
 | Field      | Value |
 |------------|-------|
 | Document   | High-Level Design — Edition 1 |
-| Version    | v1.2.1 |
+| Version    | v1.2.2 |
 | Milestone  | [v1.2.0 — HLD document & network inventory](https://github.com/hervetchoffo/telco-homelab/milestone/1) (updated during v1.3.0 with on-hardware findings) |
 | Status     | Accepted |
 | Author     | Herve Tchoffo |
@@ -1145,7 +1145,7 @@ ffprobe -rtsp_transport tcp htsp://tv.homelab.local:9982
 vlc htsp://tv.homelab.local:9982
 
 # 4. Verify DNAT rules are in place on Pi #1
-ssh pi@192.168.1.100 "sudo iptables -t nat -L -n | grep 9982"
+ssh pi-server "sudo iptables -t nat -L -n | grep 9982"
 # expected: DNAT rule pointing to 10.42.1.x:9982
 ```
 
@@ -1190,7 +1190,7 @@ successful mount:
 ```bash
 # Confirm no kube-proxy DNAT rule exists for port 2049
 # (HostPort is a direct bind — it does not appear in iptables NAT table)
-ssh pi@192.168.1.101 "sudo iptables -t nat -L -n | grep 2049"
+ssh pi-agent "sudo iptables -t nat -L -n | grep 2049"
 # Expected output: (empty — no DNAT rule, because HostPort bypasses kube-proxy)
 ```
 
@@ -1205,15 +1205,15 @@ rewriting, or NFS v4 handshakes — use `tcpdump` on the Pi nodes and
 ```bash
 # SSH into the relevant Pi node and start a background capture
 # For VXLAN inter-node traffic: capture on the physical interface
-ssh pi@192.168.1.100 "sudo tcpdump -i eth0 -w - udp port 8472" \
+ssh pi-server "sudo tcpdump -i eth0 -w - udp port 8472" \
   > /tmp/vxlan-capture.pcap
 
 # For NFS traffic: capture on Pi #2 physical interface
-ssh pi@192.168.1.101 "sudo tcpdump -i eth0 -w - port 2049" \
+ssh pi-agent "sudo tcpdump -i eth0 -w - port 2049" \
   > /tmp/nfs-capture.pcap
 
 # For HTSP NodePort: capture kube-proxy DNAT in action
-ssh pi@192.168.1.100 "sudo tcpdump -i any -w - port 9982" \
+ssh pi-server "sudo tcpdump -i any -w - port 9982" \
   > /tmp/htsp-capture.pcap
 
 # Trigger the use case from another terminal, then Ctrl-C the capture
@@ -1238,7 +1238,7 @@ directly over an SSH pipe:
 
 ```bash
 # Live decode of VXLAN traffic on Pi #1, no pcap file needed
-ssh pi@192.168.1.100 "sudo tcpdump -i eth0 -w - udp port 8472 2>/dev/null" \
+ssh pi-server "sudo tcpdump -i eth0 -w - udp port 8472 2>/dev/null" \
   | tshark -r - -Y "vxlan" -T fields \
       -e ip.src -e ip.dst -e vxlan.vni -e inner_ip.src -e inner_ip.dst
 ```
@@ -1400,15 +1400,21 @@ telco-homelab/
 │   ├── libsecret-credential-setup.md
 │   ├── hld/
 │   │   └── architecture.md          # ← this document
-│   └── adr/
-│       ├── ADR-001-k3s-vs-k0s.md
-│       ├── ADR-002-gitea-vs-gitlab.md
-│       ├── ADR-003-bookworm-vs-trixie.md
-│       ├── ADR-004-woodpecker-vs-others.md
-│       ├── ADR-005-traefik-ingress.md
-│       ├── ADR-006-local-path-storage.md
-│       └── ADR-007-no-ha-edition1.md
-├── k8s/
+│   ├── adr/
+│   │   ├── ADR-001-k3s-vs-k0s.md
+│   │   ├── ADR-002-gitea-vs-gitlab.md
+│   │   ├── ADR-003-bookworm-vs-trixie.md
+│   │   ├── ADR-004-woodpecker-vs-others.md
+│   │   ├── ADR-005-traefik-ingress.md
+│   │   ├── ADR-006-local-path-storage.md
+│   │   ├── ADR-007-no-ha-edition1.md
+│   │   └── ADR-008-sundtek-device-passthrough.md   # Proposed — v1.11.0
+│   ├── runbooks/
+│   │   └── node-setup.md            # Operator guide (v1.3.0)
+│   └── hardware/
+│       ├── inventory-pi-server.txt  # Committed hardware baseline
+│       └── inventory-pi-agent.txt   # Committed hardware baseline
+├── k8s/                              # planned — from v1.6.0
 │   ├── namespaces/
 │   ├── web/          # Nginx: Deployment, Service, PVC, IngressRoute
 │   ├── gitea/        # Gitea: StatefulSet, Service, PVC, IngressRoute, ConfigMap
@@ -1417,19 +1423,20 @@ telco-homelab/
 │   ├── storage/      # NFS: DaemonSet, Service (HostPort)
 │   ├── ingress/      # Traefik IngressRoute CRDs, TLSStore, Middleware
 │   └── backup/       # CronJob: rsync Pi #1 → Pi #2
-├── docker/
+├── docker/                           # planned — from v1.9.0
 │   ├── nginx/
 │   ├── gitea/
 │   ├── nfs/
 │   └── tvheadend/
 ├── scripts/
-│   ├── setup-node.sh        # OS prep, USB (XFS) mount, static IP
-│   ├── setup-zram.sh        # zram swap configuration
-│   └── install-k3s.sh       # K3s server / agent installation
-├── monitoring/
+│   ├── inventory-node.sh    # Read-only hardware baseline (v1.3.0)
+│   ├── setup-node.sh        # IP verification, XFS+prjquota, cgroup flags, SSH hardening (v1.3.0)
+│   ├── setup-zram.sh        # zram swap configuration (v1.3.0)
+│   └── install-k3s.sh       # K3s server / agent install reference — stub (v1.3.0), full impl v1.4.0/v1.5.0
+├── monitoring/                       # planned — from v1.15.0
 │   ├── prometheus/
 │   └── grafana/
-├── .woodpecker.yml          # CI/CD pipeline definition
+├── .woodpecker.yml                   # planned — v1.13.0
 └── .github/
     ├── ISSUE_TEMPLATE/
     │   ├── feature_request.md
@@ -1605,13 +1612,13 @@ who want to go deeper on any topic.
 
 | # | Reference |
 |---|-----------|
-| [1] | [Raspberry Pi memory options — official documentation](https://www.raspberrypi.com/documentation/computers/config_txt.html#memory-options) |
+| [1] | [Make your RAM go further — Raspberry Pi OS memory optimisation tips (Raspberry Pi Official Magazine)](https://magazine.raspberrypi.com/articles/make-your-ram-go-further-raspberry-pi-os-memory-optimisation-tips) |
 | [2] | [K3s hardware requirements — official docs](https://docs.k3s.io/installation/requirements#hardware) |
 | [3] | [Traefik RAM/CPU recommendations for K8s — Traefik Labs community forum](https://community.traefik.io/t/traefik-ram-and-cpu-recommendations-for-k8s/2756) |
 | [4] | [Scaling CoreDNS in Kubernetes clusters — official CoreDNS deployment repo](https://github.com/coredns/deployment/blob/master/kubernetes/Scaling_CoreDNS.md) |
-| [5] | [Gitea installation documentation](https://docs.gitea.com/category/installation/) |
+| [5] | [Gitea system requirements — official docs](https://docs.gitea.com/) |
 | [6] | [Woodpecker CI architecture — official docs](https://woodpecker-ci.org/docs/intro) |
-| [7] | [Tvheadend documentation — official docs site](https://docs.tvheadend.org/) |
+| [7] | [Tvheadend requirements — official docs](https://docs.tvheadend.org/documentation/installation/requirements) |
 | [8] | [RFC 7348 — VXLAN standard (IETF, 2014)](https://www.rfc-editor.org/rfc/rfc7348) |
 | [9] | [K3s Flannel backend options — official docs](https://docs.k3s.io/installation/network-options#flannel-options) |
 | [10] | [Kubernetes recommended labels](https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/) |
@@ -1639,6 +1646,7 @@ who want to go deeper on any topic.
 | v1.2.0-rc.6 | 2026-05-10 | Herve Tchoffo | Added: §11 Test & validation of call flows — validation strategy and tooling overview, per-UC smoke test procedures (UC-1 through UC-4), packet capture with tcpdump/Wireshark/tshark, Wireshark display filter reference table, architecture impact analysis; added references [16], [17], [18]; all section numbers shifted +1 to accommodate new §11; ToC updated |
 | v1.2.0-rc.7 | 2026-05-11 | Herve Tchoffo | Fixed: headroom Pi #1 corrected to ~305 MB (1000−695); CRI added to acronyms; UC-3b wording in §3 updated to reflect both node IPs; §11.2 note added on CI trigger strategy dependency; §11.6 NFS HostPort vs kube-proxy DNAT distinction clarified; §17 general reading sub-section added (Linux, Docker, K8s, CI/CD) |
 | v1.2.1 | 2026-08-30 | Herve Tchoffo | Updated with confirmed findings from v1.3.0 on-hardware validation: §5 ADR-008 added (Sundtek device passthrough, Proposed); §6.1 hostnames confirmed (`pi-server`/`pi-agent`, not the earlier `pi-1`/`pi-2` placeholder), real disk models, RAM corrected to ~920 MiB usable; §6.3 RAM headroom recalculated against measured baseline, zram actual size noted (~460 MB); §9.1 and §12.4 `kubernetes.io/hostname` label values corrected to match real hostnames; §12.1/12.2/12.4 mount point corrected from planned `/mnt/usb0` to as-built `/mnt/k3s-storage`; §15 IPv6 exposure finding and ADR-008 privileged-mode trade-off added; §16 R4 kernel reference corrected, R8/R9 added; §17 five dead reference links [1,3,4,5,7] replaced with verified working URLs |
+| v1.2.2 | 2026-08-30 | Herve Tchoffo | Second correction pass: §11.5/11.6/11.7 SSH commands corrected from `pi@<ip>` to the SSH config aliases `pi-server`/`pi-agent` set up in v1.3.0, matching the confirmed `herve` admin user rather than the generic `pi` user; §13.1 directory layout updated to match the actual repository state (ADR-008, `docs/runbooks/`, `docs/hardware/`, `scripts/inventory-node.sh` added; not-yet-built directories marked as planned with their target milestone); §17 references [1], [5], [7] replaced with better sources (Raspberry Pi Official Magazine RAM article, Gitea's own System Requirements section, Tvheadend's dedicated Requirements page) |
 
 ---
 

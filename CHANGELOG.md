@@ -12,6 +12,16 @@ conventions described in [README.md](README.md#versioning-semver).
 
 ### Changed
 
+- `docs/hld/architecture.md` (v1.2.1 → v1.2.2): second correction pass —
+  §11.5/11.6/11.7 SSH commands corrected from `pi@<ip>` to the SSH config
+  aliases `pi-server`/`pi-agent` (matching the confirmed `herve` admin
+  user, not the generic `pi` user); §13.1 directory layout updated to
+  match the actual repository state (ADR-008, `docs/runbooks/`,
+  `docs/hardware/`, `scripts/inventory-node.sh` added; not-yet-built
+  directories marked as planned with their target milestone); §17
+  references [1], [5], [7] replaced with better sources (Raspberry Pi
+  Official Magazine RAM article, Gitea's own System Requirements
+  section, Tvheadend's dedicated Requirements page)
 - `docs/hld/architecture.md` (v1.2.0-rc.7 → v1.2.1): updated with confirmed
   findings from v1.3.0 on-hardware validation — ADR-008 added to the ADR
   table; hostnames corrected from placeholder `pi-1`/`pi-2` to confirmed
