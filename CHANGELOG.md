@@ -10,6 +10,20 @@ conventions described in [README.md](README.md#versioning-semver).
 
 ## [Unreleased]
 
+### Changed
+
+- `docs/hld/architecture.md` (v1.2.0-rc.7 → v1.2.1): updated with confirmed
+  findings from v1.3.0 on-hardware validation — ADR-008 added to the ADR
+  table; hostnames corrected from placeholder `pi-1`/`pi-2` to confirmed
+  `pi-server`/`pi-agent` throughout (node labels, backup CronJob selector);
+  storage mount point corrected from planned `/mnt/usb0` to as-built
+  `/mnt/k3s-storage` (network diagram, call flows, storage design); RAM
+  budget headroom recalculated against the measured ~920 MiB baseline
+  (not the earlier assumed 1000 MB); zram actual size noted (~460 MB);
+  new risks R8 (global IPv6 exposure) and R9 (tuner passthrough privileged
+  mode) added to the risk register; five dead reference links
+  ([1], [3], [4], [5], [7]) replaced with verified working URLs
+
 ### Added
 
 - `scripts/inventory-node.sh` — read-only hardware inventory: OS/kernel,
