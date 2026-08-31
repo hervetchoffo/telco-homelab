@@ -12,6 +12,12 @@ conventions described in [README.md](README.md#versioning-semver).
 
 ### Changed
 
+- `README.md`: Repository structure tree corrected to match the actual
+  repository state (`docs/architecture.md` path was wrong — real path is
+  `docs/hld/architecture.md`; added `ADR-008`, `docs/runbooks/`,
+  `docs/hardware/`, and all four v1.3.0 scripts; not-yet-built
+  directories marked as planned with their target milestone).
+  Architecture decisions table now includes ADR-008 (🟡 Proposed)
 - `docs/hld/architecture.md` (v1.2.1 → v1.2.2): second correction pass —
   §11.5/11.6/11.7 SSH commands corrected from `pi@<ip>` to the SSH config
   aliases `pi-server`/`pi-agent` (matching the confirmed `herve` admin

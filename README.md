@@ -73,24 +73,36 @@ telco-homelab/
 ├── .gitignore
 ├── docs/
 │   ├── PROJECT_CONTEXT.md           # AI session briefing + status tracker
-│   ├── architecture.md              # High-Level Design — Edition 1 (v1.2.0)
-│   └── adr/
-│       ├── ADR-001-k3s-vs-k0s.md
-│       ├── ADR-002-gitea-vs-gitlab.md
-│       ├── ADR-003-bookworm-vs-trixie.md
-│       ├── ADR-004-woodpecker-vs-others.md
-│       ├── ADR-005-traefik-ingress.md
-│       ├── ADR-006-local-path-storage.md
-│       └── ADR-007-no-ha-edition1.md
-├── docker/                          # Dockerfiles per service
+│   ├── libsecret-credential-setup.md
+│   ├── hld/
+│   │   └── architecture.md          # High-Level Design — Edition 1 (v1.2.2)
+│   ├── adr/
+│   │   ├── ADR-001-k3s-vs-k0s.md
+│   │   ├── ADR-002-gitea-vs-gitlab.md
+│   │   ├── ADR-003-bookworm-vs-trixie.md
+│   │   ├── ADR-004-woodpecker-vs-others.md
+│   │   ├── ADR-005-traefik-ingress.md
+│   │   ├── ADR-006-local-path-storage.md
+│   │   ├── ADR-007-no-ha-edition1.md
+│   │   └── ADR-008-sundtek-device-passthrough.md   # 🟡 Proposed — v1.11.0
+│   ├── runbooks/
+│   │   └── node-setup.md            # Operator guide (v1.3.0)
+│   └── hardware/
+│       ├── inventory-pi-server.txt  # Committed hardware baseline (v1.3.0)
+│       └── inventory-pi-agent.txt   # Committed hardware baseline (v1.3.0)
+├── docker/                          # planned — from v1.9.0
 │   ├── nginx/ │ gitea/ │ nfs/ │ tvheadend/
-├── k8s/
+├── k8s/                             # planned — from v1.6.0
 │   ├── base/                        # Kustomize base manifests
 │   │   ├── nginx/ │ gitea/ │ nfs/ │ tvheadend/
 │   └── overlays/dev/ overlays/prod/
-├── monitoring/prometheus/ │ grafana/
+├── monitoring/prometheus/ │ grafana/   # planned — from v1.15.0
 ├── scripts/
-│   └── init-repo.sh                 # This script
+│   ├── init-repo.sh          # Repository initialisation (v1.1.0)
+│   ├── inventory-node.sh     # Read-only hardware baseline (v1.3.0)
+│   ├── setup-node.sh         # IP verification, XFS+prjquota, cgroup flags, SSH hardening (v1.3.0)
+│   ├── setup-zram.sh         # zram swap configuration (v1.3.0)
+│   └── install-k3s.sh        # K3s server/agent install reference — stub (v1.3.0)
 └── .github/
     ├── ISSUE_TEMPLATE/
     └── workflows/
@@ -207,6 +219,7 @@ Milestone v1.X.0
 | [ADR-005](docs/adr/ADR-005-traefik-ingress.md) | Traefik as K3s built-in ingress controller | ✅ Accepted |
 | [ADR-006](docs/adr/ADR-006-local-path-storage.md) | local-path-provisioner with XFS project quotas | ✅ Accepted |
 | [ADR-007](docs/adr/ADR-007-no-ha-edition1.md) | Single server + agent topology (no HA, Edition 1) | ✅ Accepted |
+| [ADR-008](docs/adr/ADR-008-sundtek-device-passthrough.md) | Sundtek tuner device passthrough strategy for K3s | 🟡 Proposed — decided at v1.11.0 |
 
 ---
 
