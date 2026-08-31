@@ -1,6 +1,6 @@
 # 🏠 Telco Home Lab — K3s on Raspberry Pi 2B
 
-[![Version](https://img.shields.io/badge/version-v1.2.0-blue?style=flat-square)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v1.3.0-blue?style=flat-square)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![K3s](https://img.shields.io/badge/k3s-v1.29-orange?style=flat-square)](https://k3s.io)
 [![OS](https://img.shields.io/badge/OS-RPi%20OS%20Trixie-c51a4a?style=flat-square)](docs/adr/ADR-003-bookworm-vs-trixie.md)
@@ -191,7 +191,7 @@ Milestone v1.X.0
 | `v1.1.0` | Preparation | Initialize GitHub repository | ✅ Done |
 | `v1.1.1` | Preparation | Credential setup documentation | ✅ Done |
 | `v1.2.0` | Preparation | HLD document & network inventory | ✅ Done |
-| `v1.3.0` | Preparation | Prepare Raspberry Pi OS (Trixie) | 🔲 |
+| `v1.3.0` | Preparation | Prepare Raspberry Pi OS (Trixie) | ✅ Done |
 | `v1.4.0` | K3s | K3s server on Pi #1 | 🔲 |
 | `v1.5.0` | K3s | K3s agent on Pi #2 | 🔲 |
 | `v1.6.0` | K3s | Validation deployment (smoke test) | 🔲 |
