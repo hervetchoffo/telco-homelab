@@ -3,9 +3,9 @@
 | Field      | Value |
 |------------|-------|
 | Document   | High-Level Design — Edition 1 |
-| Version    | v1.2.0-rc.7 |
-| Milestone  | [v1.2.0 — HLD document & network inventory](https://github.com/hervetchoffo/telco-homelab/milestone/1) |
-| Status     | In Progress |
+| Version    | v1.2.2 |
+| Milestone  | [v1.2.0 — HLD document & network inventory](https://github.com/hervetchoffo/telco-homelab/milestone/1) (updated during v1.3.0 with on-hardware findings) |
+| Status     | Accepted |
 | Author     | Herve Tchoffo |
 | Repository | <https://github.com/hervetchoffo/telco-homelab> |
 
@@ -273,11 +273,12 @@ All major design choices are stored in `docs/adr/`.
 |-----|-------|----------|---------------|
 | [ADR-001](../adr/ADR-001-k3s-vs-k0s.md) | K8s distribution | K3s with SQLite | 1 GB RAM per node; etcd needs ~300 MB per replica and ≥ 3 nodes |
 | [ADR-002](../adr/ADR-002-gitea-vs-gitlab.md) | Git server | Gitea (~80 MB RAM) | GitLab requires 2–4 GB |
-| [ADR-003](../adr/ADR-003-bookworm-vs-trixie.md) | Operating system | RPi OS Lite Trixie (Debian 13, kernel 6.6 LTS) | 32-bit armv7l; official RPi Foundation support |
+| [ADR-003](../adr/ADR-003-bookworm-vs-trixie.md) | Operating system | RPi OS Lite Trixie (Debian 13) | 32-bit armv7l; official RPi Foundation support. Kernel was 6.6 LTS at ADR time; confirmed running kernel as of v1.3.0 is 6.18 — Raspberry Pi's downstream kernel branch rolls forward independently of Debian's frozen userland, so this drift is expected and does not affect the decision |
 | [ADR-004](../adr/ADR-004-woodpecker-vs-others.md) | CI runner | Woodpecker CI (~50 MB) | Native Gitea OAuth; arm/v7 image; pipeline-as-code |
 | [ADR-005](../adr/ADR-005-traefik-ingress.md) | Ingress controller | Traefik (K3s built-in) | Zero extra RAM; CRD routing; auto-deployed |
 | [ADR-006](../adr/ADR-006-local-path-storage.md) | Storage | local-path-provisioner + XFS quotas | No distributed storage overhead; Ceph/Longhorn excluded |
 | [ADR-007](../adr/ADR-007-no-ha-edition1.md) | HA topology | 1 server + 1 agent (no HA) | HA needs ≥ 3 nodes; Edition 1 accepts SPOF |
+| [ADR-008](../adr/ADR-008-sundtek-device-passthrough.md) | Tuner device passthrough | Proposed — not yet decided | Host-level `/dev/dvb` device nodes required before container creation; two candidate options under evaluation; final decision at v1.11.0 |
 
 ---
 
@@ -285,16 +286,21 @@ All major design choices are stored in `docs/adr/`.
 
 ### 6.1 Node inventory
 
-| Node | IP address | K3s role | CPU | RAM | Storage |
-|------|-----------|---------|-----|-----|---------|
-| Pi #1 | `192.168.1.100` | Server (control-plane + worker) | ARM Cortex-A7 @ 900 MHz (4-core) | 1 GB LPDDR2 | 1 TB USB + microSD (OS) |
-| Pi #2 | `192.168.1.101` | Agent (worker) | ARM Cortex-A7 @ 900 MHz (4-core) | 1 GB LPDDR2 | 1 TB USB + microSD (OS) |
+| Node | Hostname | IP address | K3s role | CPU | RAM | Storage |
+|------|----------|-----------|---------|-----|-----|---------|
+| Pi #1 | `pi-server` | `192.168.1.100` | Server (control-plane + worker) | ARM Cortex-A7 @ 900 MHz (4-core) | 1 GB LPDDR2 (~920 MiB usable — confirmed via `free -h`, v1.3.0) | 1 TB USB (WD Elements SE Portable) + microSD (OS) |
+| Pi #2 | `pi-agent` | `192.168.1.101` | Agent (worker) | ARM Cortex-A7 @ 900 MHz (4-core) | 1 GB LPDDR2 (~920 MiB usable — confirmed via `free -h`, v1.3.0) | 1 TB USB (Toshiba STOR.E Basics) + microSD (OS) |
+
+> **Hostnames confirmed on real hardware at v1.3.0.** `pi-server`/`pi-agent`
+> were chosen over a generic `pi-1`/`pi-2` scheme for router DHCP-reservation
+> readability. All `kubernetes.io/hostname` label values elsewhere in this
+> document use these confirmed names.
 
 ### 6.2 Peripheral inventory
 
 | Device | Qty | Attached to | Purpose |
 |--------|-----|-------------|---------|
-| Sundtek MediaTV USB tuner | 1 | Pi #2 | DVB signal input — USB passthrough to Tvheadend pod |
+| Sundtek MediaTV Pro III MiniPCIe tuner (USB ID `2659:1212`, confirmed v1.3.0) | 1 | Pi #2 (`pi-agent`) | DVB signal input — USB passthrough to Tvheadend pod. See [ADR-008](../adr/ADR-008-sundtek-device-passthrough.md) for the host-level device-node prerequisite discovered during v1.3.0 |
 | 1 TB USB disk | 2 (one per node) | Pi #1 & Pi #2 | PVCs + cross-node rsync backup |
 
 ### 6.3 RAM budget analysis
@@ -330,7 +336,17 @@ The table below shows the estimated steady-state RAM envelope per node.
 | NFS server (nfs-ganesha) | — | ~40 | Estimated — nfs-ganesha is a single user-space daemon; idle RSS on armv7l is typically 30–50 MB |
 | Tvheadend | — | ~90 | Measured; rises to ~200 MB during active transcoding [[7]](#17-references) |
 | Woodpecker CI agent | — | ~45 | Estimated — idle agent is a small Go binary; spikes to ~300 MB during Docker builds |
-| **Total (steady-state)** | **~695 MB** | **~440 MB** | Headroom: ~305 MB / ~560 MB |
+| **Total (steady-state)** | **~695 MB** | **~440 MB** | Headroom: ~225 MB / ~480 MB (recalculated — see note below) |
+
+> **Headroom recalculated at v1.3.0 against measured RAM, not the assumed
+> 1000 MB.** `free -h` on both nodes confirms **~920 MiB usable RAM**, not a
+> full 1024 MiB — the difference is reserved for the GPU/firmware memory
+> split, standard on all Raspberry Pi boards. Headroom figures above are
+> recalculated against this measured baseline (920 − 695 ≈ 225 MB on Pi #1;
+> 920 − 440 ≈ 480 MB on Pi #2) rather than the earlier assumed 1000 MB
+> baseline. The idle RPi OS Lite figure (~120 MB estimated) also lines up
+> well with what was actually measured before any K3s components were
+> installed (~110–118 MB used at idle on both nodes).
 
 > **Why containerd is not listed as a separate row:**
 > K3s embeds containerd directly — it is not an independent process. When K3s
@@ -347,7 +363,14 @@ The table below shows the estimated steady-state RAM envelope per node.
 > `free -m`).
 >
 > **Recommended mitigations:**
-> 1. Enable **zram swap** (512 MB) on both nodes via `scripts/setup-zram.sh`.
+> 1. Enable **zram swap** (512 MB target) on both nodes via
+>    `scripts/setup-zram.sh`. Confirmed at v1.3.0: actual size settles at
+>    ~460 MB — the installed `zram-tools` version reads a `PERCENT` key
+>    (50% of ~920 MiB usable RAM) rather than the `SIZE` key, close enough
+>    to target. Also confirmed: Raspberry Pi OS Trixie ships with a
+>    different ~920 MB zram swap active by default out of the box;
+>    `setup-zram.sh` detects and replaces it with the zram-tools-managed
+>    device described here.
 > 2. Set `resources.requests` and `resources.limits` on every pod — especially
 >    the Woodpecker agent (e.g. `memory: 512Mi` limit).
 > 3. **Stagger heavy workloads** — schedule CI builds outside peak streaming
@@ -496,9 +519,9 @@ A `StatefulSet` gives each pod a stable, predictable name (e.g. `gitea-0`,
 │   │                       │   │  [ci]                        │            │
 │   │  [ci]                 │   │  └─ Woodpecker agent         │            │
 │   │  └─ Woodpecker :8000  │   │                              │            │
-│   │                       │   │  USB disk 1 TB /mnt/usb0     │            │
-│   │  USB disk 1 TB        │   │  ├─ k3s-storage/ (PVCs)      │            │
-│   │  /mnt/usb0 (PVCs)     │   │  ├─ /data/nfs (NFS export)   │            │
+│   │                       │   │  USB disk 1 TB /mnt/k3s-storage           │
+│   │  USB disk 1 TB        │   │  ├─ (PVCs)                   │            │
+│   │  /mnt/k3s-storage     │   │  ├─ /data/nfs (NFS export)   │            │
 │   └───────────────────────┘   │  └─ /backup/ (rsync from Pi#1)            │
 │                               └──────────────────────────────┘            │
 │   ═══════════════════════════════════════════════════════════════         │
@@ -707,17 +730,19 @@ workloads without duplicating policy.
 
 | Label key | Value | Node | Which pods select it |
 |-----------|-------|------|---------------------|
-| `kubernetes.io/hostname` | `pi-1` | Pi #1 | Nginx, Gitea, Woodpecker server, Traefik |
-| `kubernetes.io/hostname` | `pi-2` | Pi #2 | NFS server, Tvheadend, Woodpecker agent |
+| `kubernetes.io/hostname` | `pi-server` | Pi #1 | Nginx, Gitea, Woodpecker server, Traefik |
+| `kubernetes.io/hostname` | `pi-agent` | Pi #2 | NFS server, Tvheadend, Woodpecker agent |
 | `telco-homelab/tuner` | `sundtek` | Pi #2 | Tvheadend (USB device passthrough) |
 | `telco-homelab/role` | `storage` | Pi #2 | NFS server (`hostPath` to USB disk) |
 
-`kubernetes.io/hostname` is set automatically by K3s during node registration.
-The `telco-homelab/` labels are applied once by the bootstrap script:
+`kubernetes.io/hostname` is set automatically by K3s during node registration,
+using the node's actual OS hostname — confirmed as `pi-server`/`pi-agent` on
+real hardware at v1.3.0 (see §6.1). The `telco-homelab/` labels are applied
+once by the bootstrap script:
 
 ```bash
-kubectl label node pi-2 telco-homelab/tuner=sundtek
-kubectl label node pi-2 telco-homelab/role=storage
+kubectl label node pi-agent telco-homelab/tuner=sundtek
+kubectl label node pi-agent telco-homelab/role=storage
 ```
 
 A pod selects Pi #2 by declaring in its manifest:
@@ -837,7 +862,7 @@ sequenceDiagram
    - kube-proxy iptables rules on Pi #1 rewrite the destination to the
      Nginx pod IP (`10.42.0.x`) — no VXLAN needed (pod is on the same node).
 4. HTTP GET request arrives at Nginx pod.
-5. Nginx reads static files from the PVC (`/mnt/usb0/k3s-storage/...`).
+5. Nginx reads static files from the PVC (`/mnt/k3s-storage/...`).
 6. Traefik receives HTTP 200 response from Nginx.
 7. Response travels back through Traefik to the browser (TLS encrypted).
 
@@ -919,7 +944,7 @@ sequenceDiagram
 5. Tvheadend streams the channel to the media player over the
    established TCP HTSP connection.
 6. If a recording is scheduled, Tvheadend writes the file to the PVC
-   (`/mnt/usb0/k3s-storage/tvheadend-data/recordings/`).
+   (`/mnt/k3s-storage/tvheadend-data/recordings/`).
    This step is identical for UC-3a and UC-3b.
 
 **Differences between UC-3a and UC-3b:**
@@ -1120,7 +1145,7 @@ ffprobe -rtsp_transport tcp htsp://tv.homelab.local:9982
 vlc htsp://tv.homelab.local:9982
 
 # 4. Verify DNAT rules are in place on Pi #1
-ssh pi@192.168.1.100 "sudo iptables -t nat -L -n | grep 9982"
+ssh pi-server "sudo iptables -t nat -L -n | grep 9982"
 # expected: DNAT rule pointing to 10.42.1.x:9982
 ```
 
@@ -1165,7 +1190,7 @@ successful mount:
 ```bash
 # Confirm no kube-proxy DNAT rule exists for port 2049
 # (HostPort is a direct bind — it does not appear in iptables NAT table)
-ssh pi@192.168.1.101 "sudo iptables -t nat -L -n | grep 2049"
+ssh pi-agent "sudo iptables -t nat -L -n | grep 2049"
 # Expected output: (empty — no DNAT rule, because HostPort bypasses kube-proxy)
 ```
 
@@ -1180,15 +1205,15 @@ rewriting, or NFS v4 handshakes — use `tcpdump` on the Pi nodes and
 ```bash
 # SSH into the relevant Pi node and start a background capture
 # For VXLAN inter-node traffic: capture on the physical interface
-ssh pi@192.168.1.100 "sudo tcpdump -i eth0 -w - udp port 8472" \
+ssh pi-server "sudo tcpdump -i eth0 -w - udp port 8472" \
   > /tmp/vxlan-capture.pcap
 
 # For NFS traffic: capture on Pi #2 physical interface
-ssh pi@192.168.1.101 "sudo tcpdump -i eth0 -w - port 2049" \
+ssh pi-agent "sudo tcpdump -i eth0 -w - port 2049" \
   > /tmp/nfs-capture.pcap
 
 # For HTSP NodePort: capture kube-proxy DNAT in action
-ssh pi@192.168.1.100 "sudo tcpdump -i any -w - port 9982" \
+ssh pi-server "sudo tcpdump -i any -w - port 9982" \
   > /tmp/htsp-capture.pcap
 
 # Trigger the use case from another terminal, then Ctrl-C the capture
@@ -1213,7 +1238,7 @@ directly over an SSH pipe:
 
 ```bash
 # Live decode of VXLAN traffic on Pi #1, no pcap file needed
-ssh pi@192.168.1.100 "sudo tcpdump -i eth0 -w - udp port 8472 2>/dev/null" \
+ssh pi-server "sudo tcpdump -i eth0 -w - udp port 8472 2>/dev/null" \
   | tshark -r - -Y "vxlan" -T fields \
       -e ip.src -e ip.dst -e vxlan.vni -e inner_ip.src -e inner_ip.dst
 ```
@@ -1254,8 +1279,13 @@ storage:
 
 1. A `PersistentVolumeClaim` is created with `storageClassName: local-path`.
 2. The provisioner creates a directory under
-   `/mnt/usb0/k3s-storage/<namespace>-<pvc-name>-<uid>/` on the scheduled node.
+   `/mnt/k3s-storage/<namespace>-<pvc-name>-<uid>/` on the scheduled node.
 3. The pod mounts this directory as a volume.
+
+> **Mount point confirmed at v1.3.0.** `scripts/setup-node.sh` mounts the
+> XFS+`prjquota` USB disk directly at `/mnt/k3s-storage` (not
+> `/mnt/usb0/k3s-storage` as earlier drafted) — this document has been
+> updated to match the as-built path.
 
 ### 12.2 PVC capacity enforcement — XFS project quotas
 
@@ -1281,7 +1311,7 @@ requested size:
 
 ```bash
 # Check current quota usage
-xfs_quota -x -c 'report -p' /mnt/usb0
+xfs_quota -x -c 'report -p' /mnt/k3s-storage
 ```
 
 The official `local-path-provisioner` repository includes example quota scripts
@@ -1309,8 +1339,8 @@ not supported.
 
 | Node | Mount point | Filesystem | Contents |
 |------|------------|-----------|---------|
-| Pi #1 | `/mnt/usb0` | XFS (1 TB) | `k3s-storage/` — Nginx, Gitea, Woodpecker PVCs |
-| Pi #2 | `/mnt/usb0` | XFS (1 TB) | `k3s-storage/` — Tvheadend PVC + `/data/nfs` + `/backup/` |
+| Pi #1 (`pi-server`) | `/mnt/k3s-storage` | XFS (1 TB, `prjquota`) | Nginx, Gitea, Woodpecker PVCs |
+| Pi #2 (`pi-agent`) | `/mnt/k3s-storage` | XFS (1 TB, `prjquota`) | Tvheadend PVC + `/data/nfs` + `/backup/` |
 
 **The Pi #2 USB disk as a backup target:**
 
@@ -1332,7 +1362,7 @@ spec:
       template:
         spec:
           nodeSelector:
-            kubernetes.io/hostname: pi-2
+            kubernetes.io/hostname: pi-agent
           containers:
           - name: rsync
             image: instrumentisto/rsync-ssh:latest
@@ -1348,7 +1378,7 @@ spec:
           volumes:
           - name: backup-disk
             hostPath:
-              path: /mnt/usb0/backup
+              path: /mnt/k3s-storage/backup
               type: DirectoryOrCreate
           restartPolicy: OnFailure
 ```
@@ -1370,15 +1400,21 @@ telco-homelab/
 │   ├── libsecret-credential-setup.md
 │   ├── hld/
 │   │   └── architecture.md          # ← this document
-│   └── adr/
-│       ├── ADR-001-k3s-vs-k0s.md
-│       ├── ADR-002-gitea-vs-gitlab.md
-│       ├── ADR-003-bookworm-vs-trixie.md
-│       ├── ADR-004-woodpecker-vs-others.md
-│       ├── ADR-005-traefik-ingress.md
-│       ├── ADR-006-local-path-storage.md
-│       └── ADR-007-no-ha-edition1.md
-├── k8s/
+│   ├── adr/
+│   │   ├── ADR-001-k3s-vs-k0s.md
+│   │   ├── ADR-002-gitea-vs-gitlab.md
+│   │   ├── ADR-003-bookworm-vs-trixie.md
+│   │   ├── ADR-004-woodpecker-vs-others.md
+│   │   ├── ADR-005-traefik-ingress.md
+│   │   ├── ADR-006-local-path-storage.md
+│   │   ├── ADR-007-no-ha-edition1.md
+│   │   └── ADR-008-sundtek-device-passthrough.md   # Proposed — v1.11.0
+│   ├── runbooks/
+│   │   └── node-setup.md            # Operator guide (v1.3.0)
+│   └── hardware/
+│       ├── inventory-pi-server.txt  # Committed hardware baseline
+│       └── inventory-pi-agent.txt   # Committed hardware baseline
+├── k8s/                              # planned — from v1.6.0
 │   ├── namespaces/
 │   ├── web/          # Nginx: Deployment, Service, PVC, IngressRoute
 │   ├── gitea/        # Gitea: StatefulSet, Service, PVC, IngressRoute, ConfigMap
@@ -1387,19 +1423,20 @@ telco-homelab/
 │   ├── storage/      # NFS: DaemonSet, Service (HostPort)
 │   ├── ingress/      # Traefik IngressRoute CRDs, TLSStore, Middleware
 │   └── backup/       # CronJob: rsync Pi #1 → Pi #2
-├── docker/
+├── docker/                           # planned — from v1.9.0
 │   ├── nginx/
 │   ├── gitea/
 │   ├── nfs/
 │   └── tvheadend/
 ├── scripts/
-│   ├── setup-node.sh        # OS prep, USB (XFS) mount, static IP
-│   ├── setup-zram.sh        # zram swap configuration
-│   └── install-k3s.sh       # K3s server / agent installation
-├── monitoring/
+│   ├── inventory-node.sh    # Read-only hardware baseline (v1.3.0)
+│   ├── setup-node.sh        # IP verification, XFS+prjquota, cgroup flags, SSH hardening (v1.3.0)
+│   ├── setup-zram.sh        # zram swap configuration (v1.3.0)
+│   └── install-k3s.sh       # K3s server / agent install reference — stub (v1.3.0), full impl v1.4.0/v1.5.0
+├── monitoring/                       # planned — from v1.15.0
 │   ├── prometheus/
 │   └── grafana/
-├── .woodpecker.yml          # CI/CD pipeline definition
+├── .woodpecker.yml                   # planned — v1.13.0
 └── .github/
     ├── ISSUE_TEMPLATE/
     │   ├── feature_request.md
@@ -1491,6 +1528,14 @@ it is absolutely necessary.
 - VXLAN traffic is plaintext on the LAN — acceptable for a trusted home
   network. Use `--flannel-backend=wireguard-native` if the threat model
   requires encryption between nodes.
+- **New finding (v1.3.0):** both nodes carry a globally routable IPv6
+  address (SLAAC-assigned from the ISP-delegated prefix), confirmed via
+  `hostnamectl`/`ip addr` during validation. Unlike IPv4 behind NAT, a
+  global IPv6 address may be directly reachable from the Internet unless
+  the router firewalls inbound IPv6 explicitly — most consumer routers do
+  **not** apply the same default-deny posture to IPv6 that NAT provides
+  for IPv4 by default. Flagged for a dedicated review before any IngressRoute
+  or NodePort goes live; not yet mitigated as of this revision.
 
 ### Secret management — protecting the keys
 
@@ -1512,6 +1557,11 @@ undermine everything from the inside.
 - Woodpecker CI pipeline includes a Trivy scan stage (milestone v1.14.0).
   Trivy inspects the image contents and fails the pipeline if known
   vulnerabilities (CVEs) above a configured severity are found.
+- **Flagged for v1.11.0 (see [ADR-008](../adr/ADR-008-sundtek-device-passthrough.md)):**
+  Tvheadend's tuner device passthrough will likely require
+  `securityContext.privileged: true`, a real trade-off against this
+  section's least-privilege posture that should be weighed explicitly
+  rather than accepted by default when that milestone is implemented.
 - Base images are pinned to SHA digests in Kubernetes manifests:
   - **The problem with tags:** an image reference like `nginx:latest` can
     silently change — the same tag may point to different code tomorrow.
@@ -1530,10 +1580,12 @@ undermine everything from the inside.
 | R1 | Pi #1 is a SPOF — cluster unavailable if it fails | **HIGH** | Accepted for Edition 1. Multi-master HA (3+ nodes) is Edition 2. Nightly SQLite backup to Pi #2 USB disk (v1.7.0). |
 | R2 | RAM pressure — OOM killer may terminate pods | **MEDIUM** | zram swap on both nodes; resource limits on all pods; stagger heavy builds. |
 | R3 | USB disk failure — PVCs are node-local, not replicated | **MEDIUM** | rsync CronJob Pi #1 → Pi #2 USB disk (v1.7.0). |
-| R4 | Sundtek driver compatibility with kernel 6.6 armv7l | **LOW** | Sundtek uses a user-space driver — kernel-version agnostic. Validated on Debian armv7l. |
+| R4 | Sundtek driver compatibility with kernel armv7l (confirmed 6.18 as of v1.3.0, drifted from the 6.6 LTS baseline in ADR-003) | **LOW** | Sundtek uses a user-space driver — kernel-version agnostic. Validated on Debian armv7l. |
 | R5 | 32-bit OS limits container image availability | **LOW** | All required images provide `arm/v7` tags. Verified before each milestone. |
 | R6 | Tvheadend transcoding RAM spike evicts other pods | **LOW** | Disable software transcoding; serve raw stream and let the client decode. |
 | R7 | XFS quota scripts require maintenance with provisioner upgrades | **LOW** | Pin local-path-provisioner version; test quota scripts after any upgrade. |
+| R8 | Both nodes carry a globally routable IPv6 address, potentially reachable from the Internet without router-level IPv6 firewalling (found v1.3.0) | **MEDIUM** | Not yet mitigated. Requires a dedicated review of router IPv6 firewall rules before any IngressRoute/NodePort goes live. |
+| R9 | Tvheadend tuner passthrough likely requires `privileged: true` (see [ADR-008](../adr/ADR-008-sundtek-device-passthrough.md)), a least-privilege trade-off | **LOW** | Deferred to v1.11.0. Evaluate device cgroup rules as a less permissive alternative before accepting `privileged: true`. |
 
 ---
 
@@ -1560,13 +1612,13 @@ who want to go deeper on any topic.
 
 | # | Reference |
 |---|-----------|
-| [1] | [Raspberry Pi OS memory usage — RPi forums](https://forums.raspberrypi.com/viewtopic.php?t=306555) |
+| [1] | [Make your RAM go further — Raspberry Pi OS memory optimisation tips (Raspberry Pi Official Magazine)](https://magazine.raspberrypi.com/articles/make-your-ram-go-further-raspberry-pi-os-memory-optimisation-tips) |
 | [2] | [K3s hardware requirements — official docs](https://docs.k3s.io/installation/requirements#hardware) |
-| [3] | [Traefik v2 memory — community benchmark](https://community.traefik.io/t/memory-usage-traefik-v2/5724) |
-| [4] | [CoreDNS performance tuning — CNCF blog](https://coredns.io/2019/03/03/coredns-performance-tuning/) |
-| [5] | [Gitea hardware requirements — official docs](https://docs.gitea.com/installation/requirements) |
+| [3] | [Traefik RAM/CPU recommendations for K8s — Traefik Labs community forum](https://community.traefik.io/t/traefik-ram-and-cpu-recommendations-for-k8s/2756) |
+| [4] | [Scaling CoreDNS in Kubernetes clusters — official CoreDNS deployment repo](https://github.com/coredns/deployment/blob/master/kubernetes/Scaling_CoreDNS.md) |
+| [5] | [Gitea system requirements — official docs](https://docs.gitea.com/) |
 | [6] | [Woodpecker CI architecture — official docs](https://woodpecker-ci.org/docs/intro) |
-| [7] | [Tvheadend hardware recommendations — wiki](https://tvheadend.org/projects/tvheadend/wiki/AptRepository) |
+| [7] | [Tvheadend requirements — official docs](https://docs.tvheadend.org/documentation/installation/requirements) |
 | [8] | [RFC 7348 — VXLAN standard (IETF, 2014)](https://www.rfc-editor.org/rfc/rfc7348) |
 | [9] | [K3s Flannel backend options — official docs](https://docs.k3s.io/installation/network-options#flannel-options) |
 | [10] | [Kubernetes recommended labels](https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/) |
@@ -1593,6 +1645,8 @@ who want to go deeper on any topic.
 | v1.2.0-rc.5 (author edit) | 2026-05-09 | Herve Tchoffo | Fixed: Mermaid participant labels use Pi.N notation (avoids # parser issue); IngressRoute table — removed HTSP NodePort row (not an IngressRoute CRD); UC-1 prose steps 4–6 split for clarity; UC-2 prose steps renumbered with sub-bullets; UC-3b SNAT source IP detail added (Gateway IP 10.42.0.1/10.42.1.1); UC-3b comparison table — VXLAN qualified as conditional on Pi #1 arrival; UC-4 step numbering starts at 0 |
 | v1.2.0-rc.6 | 2026-05-10 | Herve Tchoffo | Added: §11 Test & validation of call flows — validation strategy and tooling overview, per-UC smoke test procedures (UC-1 through UC-4), packet capture with tcpdump/Wireshark/tshark, Wireshark display filter reference table, architecture impact analysis; added references [16], [17], [18]; all section numbers shifted +1 to accommodate new §11; ToC updated |
 | v1.2.0-rc.7 | 2026-05-11 | Herve Tchoffo | Fixed: headroom Pi #1 corrected to ~305 MB (1000−695); CRI added to acronyms; UC-3b wording in §3 updated to reflect both node IPs; §11.2 note added on CI trigger strategy dependency; §11.6 NFS HostPort vs kube-proxy DNAT distinction clarified; §17 general reading sub-section added (Linux, Docker, K8s, CI/CD) |
+| v1.2.1 | 2026-08-30 | Herve Tchoffo | Updated with confirmed findings from v1.3.0 on-hardware validation: §5 ADR-008 added (Sundtek device passthrough, Proposed); §6.1 hostnames confirmed (`pi-server`/`pi-agent`, not the earlier `pi-1`/`pi-2` placeholder), real disk models, RAM corrected to ~920 MiB usable; §6.3 RAM headroom recalculated against measured baseline, zram actual size noted (~460 MB); §9.1 and §12.4 `kubernetes.io/hostname` label values corrected to match real hostnames; §12.1/12.2/12.4 mount point corrected from planned `/mnt/usb0` to as-built `/mnt/k3s-storage`; §15 IPv6 exposure finding and ADR-008 privileged-mode trade-off added; §16 R4 kernel reference corrected, R8/R9 added; §17 five dead reference links [1,3,4,5,7] replaced with verified working URLs |
+| v1.2.2 | 2026-08-30 | Herve Tchoffo | Second correction pass: §11.5/11.6/11.7 SSH commands corrected from `pi@<ip>` to the SSH config aliases `pi-server`/`pi-agent` set up in v1.3.0, matching the confirmed `herve` admin user rather than the generic `pi` user; §13.1 directory layout updated to match the actual repository state (ADR-008, `docs/runbooks/`, `docs/hardware/`, `scripts/inventory-node.sh` added; not-yet-built directories marked as planned with their target milestone); §17 references [1], [5], [7] replaced with better sources (Raspberry Pi Official Magazine RAM article, Gitea's own System Requirements section, Tvheadend's dedicated Requirements page) |
 
 ---
 
